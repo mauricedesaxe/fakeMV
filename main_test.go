@@ -184,5 +184,57 @@ func TestCashFlowEvents(t *testing.T) {
 		}
 	})
 
+	t.Run("Create MV for a user's last 30 events", func(t *testing.T) {
+		fakeMV := &FakeMV{}
+
+		// open database
+		db, err := sql.Open("sqlite3", "./test.db")
+		if err != nil {
+			t.Errorf("Error opening database: %v", err)
+		}
+		defer db.Close()
+
+		// get a rawSample of a user's last 30 events
+		rawSample, err := db.Query(`SELECT id, amount, category, user_id FROM events WHERE user_id = 1 ORDER BY date DESC LIMIT 30`)
+		if err != nil {
+			t.Errorf("Error getting data from raw table: %v", err)
+		}
+		defer rawSample.Close()
+
+		err = fakeMV.CreateMV(db, `
+			SELECT id, amount, category, user_id FROM events WHERE user_id = 1 ORDER BY date DESC LIMIT 30`, "user_1_events_last_30")
+		if err != nil {
+			t.Errorf("Error creating material view: %v", err)
+		}
+
+		// get data from the material view
+		mvSample, err := db.Query(`SELECT * FROM user_1_events_last_30`)
+		if err != nil {
+			t.Errorf("Error getting data from material view: %v", err)
+		}
+		defer mvSample.Close()
+
+		// test if the firstMvSample is the same as the firstRawSample
+		for rawSample.Next() && mvSample.Next() {
+			var id1, id2 int
+			var amount1, amount2 int
+			var category1, category2 string
+			var user_id1, user_id2 int
+			err = rawSample.Scan(&id1, &amount1, &category1, &user_id1)
+			if err != nil {
+				t.Errorf("Error scanning raw sample: %v", err)
+			}
+			err = mvSample.Scan(&id2, &amount2, &category2, &user_id2)
+			if err != nil {
+				t.Errorf("Error scanning MV sample: %v", err)
+			}
+			if id1 != id2 || amount1 != amount2 || category1 != category2 || user_id1 != user_id2 {
+				t.Errorf("Mismatch: Raw(%d, %d, %s, %d) != MV(%d, %d, %s, %d)",
+					id1, amount1, category1, user_id1,
+					id2, amount2, category2, user_id2)
+			}
+		}
+	})
+
 	cleanup()
 }
