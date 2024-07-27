@@ -77,7 +77,7 @@ func TestCashFlowEvents(t *testing.T) {
 		}
 	})
 
-	t.Run("CreateMV", func(t *testing.T) {
+	t.Run("Basic CreateMV test", func(t *testing.T) {
 		fakeMV := &FakeMV{}
 
 		// open database
@@ -132,7 +132,7 @@ func TestCashFlowEvents(t *testing.T) {
 		}
 	})
 
-	t.Run("RefreshMV", func(t *testing.T) {
+	t.Run("Basic RefreshMV test", func(t *testing.T) {
 		fakeMV := &FakeMV{}
 
 		// open database
