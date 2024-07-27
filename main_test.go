@@ -311,6 +311,55 @@ func TestCashFlowEvents(t *testing.T) {
 						id2, amount2, category2, user_id2)
 				}
 			}
+
+			// modify all events of the user (change amounts)
+			_, err = db.Exec(fmt.Sprintf(`UPDATE events SET amount = %d WHERE user_id = %d`, rand.Intn(10000), user_id))
+			if err != nil {
+				t.Errorf("Error updating events: %v", err)
+			}
+
+			// refresh the material view
+			err = fakeMV.RefreshMV(db, fmt.Sprintf("user_%d_income_events", user_id))
+			if err != nil {
+				t.Errorf("Error refreshing material view: %v", err)
+			}
+
+			// get raw data from db again
+			rawSample, err = db.Query(fmt.Sprintf(`
+				SELECT id, amount, category, user_id FROM events
+				WHERE user_id = %d AND category = "income"`, user_id))
+			if err != nil {
+				t.Errorf("Error getting data from raw table: %v", err)
+			}
+			defer rawSample.Close()
+
+			// get data from the material view again
+			mvSample, err = db.Query(fmt.Sprintf(`SELECT * FROM user_%d_income_events`, user_id))
+			if err != nil {
+				t.Errorf("Error getting data from material view: %v", err)
+			}
+			defer mvSample.Close()
+
+			// test if the mvSample is the same as the rawSample
+			for rawSample.Next() && mvSample.Next() {
+				var id1, id2 int
+				var amount1, amount2 int
+				var category1, category2 string
+				var user_id1, user_id2 int
+				err = rawSample.Scan(&id1, &amount1, &category1, &user_id1)
+				if err != nil {
+					t.Errorf("Error scanning raw sample: %v", err)
+				}
+				err = mvSample.Scan(&id2, &amount2, &category2, &user_id2)
+				if err != nil {
+					t.Errorf("Error scanning MV sample: %v", err)
+				}
+				if id1 != id2 || amount1 != amount2 || category1 != category2 || user_id1 != user_id2 {
+					t.Errorf("Mismatch: Raw(%d, %d, %s, %d) != MV(%d, %d, %s, %d)",
+						id1, amount1, category1, user_id1,
+						id2, amount2, category2, user_id2)
+				}
+			}
 		}
 	})
 
