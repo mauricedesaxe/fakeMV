@@ -66,6 +66,8 @@ func main() {
 	defer rows.Close()
 	logTable(rows)
 
+	// delete all events to start fresh
+	db.Exec(`DELETE FROM cash_flow_events`)
 }
 
 func logTable(rows *sql.Rows) {
