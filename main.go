@@ -3,15 +3,9 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"log"
 
 	_ "github.com/mattn/go-sqlite3"
 )
-
-func main() {
-	// open the database
-	log.Println("hello")
-}
 
 type FakeMV struct{}
 
