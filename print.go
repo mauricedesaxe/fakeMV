@@ -19,6 +19,8 @@ func logTable(rows *sql.Rows) {
 		scanArgs[i] = &values[i]
 	}
 
+	log.Printf("\n\n")
+
 	// Print header
 	for _, col := range columns {
 		fmt.Printf("%-15s", col)
@@ -43,4 +45,5 @@ func logTable(rows *sql.Rows) {
 	if err = rows.Err(); err != nil {
 		log.Fatal(err)
 	}
+	log.Printf("\n\n")
 }
