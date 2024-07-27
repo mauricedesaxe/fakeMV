@@ -42,7 +42,7 @@ func TestCashFlowEvents(t *testing.T) {
 		defer db.Close()
 
 		// create the table
-		_, err = db.Exec(`CREATE TABLE IF NOT EXISTS cash_flow_events (
+		_, err = db.Exec(`CREATE TABLE IF NOT EXISTS events (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		amount INTEGER NOT NULL, 
 		date TIMESTAMP NOT NULL, 
@@ -55,23 +55,23 @@ func TestCashFlowEvents(t *testing.T) {
 		deleted_at TIMESTAMP
 	)`)
 		if err != nil {
-			t.Errorf("Error creating cash_flow_events table: %v", err)
+			t.Errorf("Error creating events table: %v", err)
 		}
 
 		// get events count
 		var count int
-		db.QueryRow("SELECT COUNT(*) FROM cash_flow_events").Scan(&count)
+		db.QueryRow("SELECT COUNT(*) FROM events").Scan(&count)
 		if count < 1000 {
 			// seed with fake events up to 1000
 			for i := 0; i < 1000-count; i++ {
 				db.Exec(`
-			INSERT INTO cash_flow_events (amount, date, category, necessity, description, user_id) 
+			INSERT INTO events (amount, date, category, necessity, description, user_id) 
 			VALUES (?, ?, ?, ?, ?, ?)`, rand.Intn(10000), time.Now().AddDate(0, 0, rand.Intn(30)), "income", "need", "description", rand.Intn(100))
 			}
 		}
 
 		// expect 1000 events
-		db.QueryRow("SELECT COUNT(*) FROM cash_flow_events").Scan(&count)
+		db.QueryRow("SELECT COUNT(*) FROM events").Scan(&count)
 		if count != 1000 {
 			t.Errorf("Expected 1000 events, got %d", count)
 		}
@@ -88,7 +88,7 @@ func TestCashFlowEvents(t *testing.T) {
 		defer db.Close()
 
 		// get a rawSample of 5 events
-		rawSample, err := db.Query(`SELECT id, amount, category, user_id FROM cash_flow_events ORDER BY id DESC LIMIT 5`)
+		rawSample, err := db.Query(`SELECT id, amount, category, user_id FROM events ORDER BY id DESC LIMIT 5`)
 		if err != nil {
 			t.Errorf("Error getting data from raw table: %v", err)
 		}
@@ -98,13 +98,13 @@ func TestCashFlowEvents(t *testing.T) {
 		if err != nil {
 			t.Errorf("Error preparing material view central store: %v", err)
 		}
-		err = fakeMV.CreateMV(db, `SELECT id, amount, category, user_id FROM cash_flow_events ORDER BY id DESC LIMIT 5`, "cash_flow_events_mv")
+		err = fakeMV.CreateMV(db, `SELECT id, amount, category, user_id FROM events ORDER BY id DESC LIMIT 5`, "events_sample")
 		if err != nil {
 			t.Errorf("Error creating material view: %v", err)
 		}
 
 		// get data from the material view
-		mvSample, err := db.Query(`SELECT * FROM cash_flow_events_mv`)
+		mvSample, err := db.Query(`SELECT * FROM events_sample`)
 		if err != nil {
 			t.Errorf("Error getting data from material view: %v", err)
 		}
@@ -143,21 +143,21 @@ func TestCashFlowEvents(t *testing.T) {
 		defer db.Close()
 
 		// remove the last 5 events & refresh the material view
-		_, err = db.Exec(`DELETE FROM cash_flow_events WHERE id IN (SELECT id FROM cash_flow_events ORDER BY id DESC LIMIT 5)`)
+		_, err = db.Exec(`DELETE FROM events WHERE id IN (SELECT id FROM events ORDER BY id DESC LIMIT 5)`)
 		if err != nil {
 			t.Errorf("Error deleting events: %v", err)
 		}
-		err = fakeMV.RefreshMV(db, "cash_flow_events_mv")
+		err = fakeMV.RefreshMV(db, "events_sample")
 		if err != nil {
 			t.Errorf("Error refreshing material view: %v", err)
 		}
 
 		// get data from raw table and from material view
-		rawSample, err := db.Query(`SELECT id, amount, category, user_id FROM cash_flow_events ORDER BY id DESC LIMIT 5`)
+		rawSample, err := db.Query(`SELECT id, amount, category, user_id FROM events ORDER BY id DESC LIMIT 5`)
 		if err != nil {
 			t.Errorf("Error getting data from raw table: %v", err)
 		}
-		mvSample, err := db.Query(`SELECT * FROM cash_flow_events_mv`)
+		mvSample, err := db.Query(`SELECT * FROM events_sample`)
 		if err != nil {
 			t.Errorf("Error getting data from material view: %v", err)
 		}
