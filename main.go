@@ -104,6 +104,12 @@ func createMV(db *sql.DB, query string, mvName string) error {
 		return fmt.Errorf("error creating table: %w", err)
 	}
 
+	// Drop data of table
+	_, err = db.Exec(fmt.Sprintf("DELETE FROM %s", mvName))
+	if err != nil {
+		return fmt.Errorf("error deleting data: %w", err)
+	}
+
 	// Insert data into the new table
 	insertSQL := fmt.Sprintf("INSERT INTO %s SELECT * FROM (%s)", mvName, query)
 	_, err = db.Exec(insertSQL)
