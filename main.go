@@ -104,18 +104,31 @@ func createMV(db *sql.DB, query string, mvName string) error {
 		return fmt.Errorf("error creating table: %w", err)
 	}
 
+	// Start a transaction
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("error starting transaction: %w", err)
+	}
+	defer tx.Rollback() // Rollback in case of error
+
 	// Drop data of table
-	_, err = db.Exec(fmt.Sprintf("DELETE FROM %s", mvName))
+	_, err = tx.Exec(fmt.Sprintf("DELETE FROM %s", mvName))
 	if err != nil {
 		return fmt.Errorf("error deleting data: %w", err)
 	}
 
 	// Insert data into the new table
 	insertSQL := fmt.Sprintf("INSERT INTO %s SELECT * FROM (%s)", mvName, query)
-	_, err = db.Exec(insertSQL)
+	_, err = tx.Exec(insertSQL)
 	if err != nil {
 		return fmt.Errorf("error inserting data: %w", err)
 	}
+
+	// Commit the transaction
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("error committing transaction: %w", err)
+	}
+
 	log.Println("insertion query:", insertSQL)
 
 	// read the data from the new table
