@@ -1,0 +1,6 @@
+tmp
+bin
+templates
+*.templ
+*.db
+.env

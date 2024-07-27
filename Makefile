@@ -1,0 +1,4 @@
+.PHONY: run
+
+dev: 
+	air
