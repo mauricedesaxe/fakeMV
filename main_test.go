@@ -2,6 +2,8 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
+	"log"
 	"math/rand"
 	"os"
 	"testing"
@@ -232,6 +234,82 @@ func TestCashFlowEvents(t *testing.T) {
 				t.Errorf("Mismatch: Raw(%d, %d, %s, %d) != MV(%d, %d, %s, %d)",
 					id1, amount1, category1, user_id1,
 					id2, amount2, category2, user_id2)
+			}
+		}
+	})
+
+	t.Run("Create MV for each user's income events", func(t *testing.T) {
+		fakeMV := &FakeMV{}
+
+		// open database
+		db, err := sql.Open("sqlite3", "./test.db")
+		if err != nil {
+			t.Errorf("Error opening database: %v", err)
+		}
+		defer db.Close()
+
+		// get count of distinct user_id
+		var count int
+		db.QueryRow("SELECT COUNT(DISTINCT user_id) FROM events").Scan(&count)
+		log.Println("user_id count: ", count)
+
+		// get all distinct user_id
+		userIds, err := db.Query(`SELECT DISTINCT user_id FROM events`)
+		if err != nil {
+			t.Errorf("Error getting user_ids: %v", err)
+		}
+		defer userIds.Close()
+
+		// create material view for each user's income events
+		for userIds.Next() {
+			var user_id int
+			err = userIds.Scan(&user_id)
+			if err != nil {
+				t.Errorf("Error scanning user_id: %v", err)
+			}
+
+			err = fakeMV.CreateMV(db, fmt.Sprintf(`
+				SELECT id, amount, category, user_id FROM events 
+				WHERE user_id = %d AND category = "income"`, user_id), fmt.Sprintf("user_%d_income_events", user_id))
+			if err != nil {
+				t.Errorf("Error creating material view: %v", err)
+			}
+
+			// get raw data from db
+			rawSample, err := db.Query(fmt.Sprintf(`
+				SELECT id, amount, category, user_id FROM events
+				WHERE user_id = %d AND category = "income"`, user_id))
+			if err != nil {
+				t.Errorf("Error getting data from raw table: %v", err)
+			}
+			defer rawSample.Close()
+
+			// get data from the material view
+			mvSample, err := db.Query(fmt.Sprintf(`SELECT * FROM user_%d_income_events`, user_id))
+			if err != nil {
+				t.Errorf("Error getting data from material view: %v", err)
+			}
+			defer mvSample.Close()
+
+			// test if the mvSample is the same as the rawSample
+			for rawSample.Next() && mvSample.Next() {
+				var id1, id2 int
+				var amount1, amount2 int
+				var category1, category2 string
+				var user_id1, user_id2 int
+				err = rawSample.Scan(&id1, &amount1, &category1, &user_id1)
+				if err != nil {
+					t.Errorf("Error scanning raw sample: %v", err)
+				}
+				err = mvSample.Scan(&id2, &amount2, &category2, &user_id2)
+				if err != nil {
+					t.Errorf("Error scanning MV sample: %v", err)
+				}
+				if id1 != id2 || amount1 != amount2 || category1 != category2 || user_id1 != user_id2 {
+					t.Errorf("Mismatch: Raw(%d, %d, %s, %d) != MV(%d, %d, %s, %d)",
+						id1, amount1, category1, user_id1,
+						id2, amount2, category2, user_id2)
+				}
 			}
 		}
 	})
