@@ -55,7 +55,8 @@ func main() {
 		}
 	}
 
-	// log events cound
+	// log new events count
+	db.QueryRow("SELECT COUNT(*) FROM cash_flow_events").Scan(&count)
 	log.Printf("Events count: %d", count)
 
 	// get a sample of 5 events
