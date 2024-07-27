@@ -13,9 +13,11 @@ func main() {
 	log.Println("hello")
 }
 
+type FakeMV struct{}
+
 // creates a table where we store material views => query connections
 // so the user can easily refresh the material view in the future
-func prepareMVCentralStore(db *sql.DB) error {
+func (f *FakeMV) Init(db *sql.DB) error {
 	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS mv_central_store (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL,  -- name of the material view
@@ -30,7 +32,7 @@ func prepareMVCentralStore(db *sql.DB) error {
 	return nil
 }
 
-func createMV(db *sql.DB, query string, mvName string) error {
+func (f *FakeMV) CreateMV(db *sql.DB, query string, mvName string) error {
 	// Get data based on provided query
 	rows, err := db.Query(query)
 	if err != nil {
@@ -94,7 +96,7 @@ func createMV(db *sql.DB, query string, mvName string) error {
 	return nil
 }
 
-func refreshMV(db *sql.DB, mvName string) error {
+func (f *FakeMV) RefreshMV(db *sql.DB, mvName string) error {
 	// find the query used to create the material view
 	query := ""
 	db.QueryRow("SELECT query FROM mv_central_store WHERE name = ?", mvName).Scan(&query)
@@ -103,7 +105,7 @@ func refreshMV(db *sql.DB, mvName string) error {
 	}
 
 	// re-create the material view
-	return createMV(db, query, mvName)
+	return f.CreateMV(db, query, mvName)
 }
 
 func sqliteType(dbType string) string {

@@ -10,6 +10,7 @@ import (
 
 var db *sql.DB
 var err error
+var fakeMV *FakeMV
 
 func TestSetupDb(t *testing.T) {
 	db, err = sql.Open("sqlite3", "./test.db")
@@ -75,11 +76,11 @@ func TestCreateMV(t *testing.T) {
 	}
 	defer rawSample.Close()
 
-	err = prepareMVCentralStore(db)
+	err = fakeMV.Init(db)
 	if err != nil {
 		t.Errorf("Error preparing material view central store: %v", err)
 	}
-	err = createMV(db, `SELECT id, amount, category, user_id FROM cash_flow_events ORDER BY id DESC LIMIT 5`, "cash_flow_events_mv")
+	err = fakeMV.CreateMV(db, `SELECT id, amount, category, user_id FROM cash_flow_events ORDER BY id DESC LIMIT 5`, "cash_flow_events_mv")
 	if err != nil {
 		t.Errorf("Error creating material view: %v", err)
 	}
@@ -126,7 +127,7 @@ func TestRefreshMV(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error deleting events: %v", err)
 	}
-	err = refreshMV(db, "cash_flow_events_mv")
+	err = fakeMV.RefreshMV(db, "cash_flow_events_mv")
 	if err != nil {
 		t.Errorf("Error refreshing material view: %v", err)
 	}
