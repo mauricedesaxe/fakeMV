@@ -69,7 +69,7 @@ func TestCreateMV(t *testing.T) {
 	defer db.Close()
 
 	// get a rawSample of 5 events
-	rawSample, err := db.Query(`SELECT id, amount, category, user_id FROM cash_flow_events LIMIT 5`)
+	rawSample, err := db.Query(`SELECT id, amount, category, user_id FROM cash_flow_events ORDER BY id DESC LIMIT 5`)
 	if err != nil {
 		t.Errorf("Error getting data from raw table: %v", err)
 	}
@@ -79,7 +79,7 @@ func TestCreateMV(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error preparing material view central store: %v", err)
 	}
-	err = createMV(db, `SELECT id, amount, category, user_id FROM cash_flow_events LIMIT 5`, "cash_flow_events_mv")
+	err = createMV(db, `SELECT id, amount, category, user_id FROM cash_flow_events ORDER BY id DESC LIMIT 5`, "cash_flow_events_mv")
 	if err != nil {
 		t.Errorf("Error creating material view: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestRefreshMV(t *testing.T) {
 	}
 
 	// get data from raw table and from material view
-	rawSample, err := db.Query(`SELECT id FROM cash_flow_events ORDER BY id DESC LIMIT 5`)
+	rawSample, err := db.Query(`SELECT id, amount, category, user_id FROM cash_flow_events ORDER BY id DESC LIMIT 5`)
 	if err != nil {
 		t.Errorf("Error getting data from raw table: %v", err)
 	}
