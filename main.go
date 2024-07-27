@@ -51,7 +51,7 @@ func main() {
 		for i := 0; i < 1000-count; i++ {
 			db.Exec(`
 			INSERT INTO cash_flow_events (amount, date, category, necessity, description, user_id) 
-			VALUES (?, ?, ?, ?, ?, ?)`, rand.Intn(10000), time.Now().AddDate(0, 0, rand.Intn(30)), "income", "need", "description", 1)
+			VALUES (?, ?, ?, ?, ?, ?)`, rand.Intn(10000), time.Now().AddDate(0, 0, rand.Intn(30)), "income", "need", "description", rand.Intn(100))
 		}
 	}
 
