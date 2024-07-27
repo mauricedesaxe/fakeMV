@@ -24,7 +24,9 @@ func TestSetupDb(t *testing.T) {
 	db.Exec("PRAGMA synchronous = NORMAL;")
 	db.Exec("PRAGMA cache_size = -64000;")
 	db.Exec("PRAGMA temp_store = MEMORY;")
+}
 
+func TestSetupTable(t *testing.T) {
 	// create the table
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS cash_flow_events (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
