@@ -3,4 +3,5 @@ bin
 templates
 *.templ
 *.db
+*.db-*
 .env

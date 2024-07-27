@@ -2,7 +2,9 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"math/rand"
@@ -65,6 +67,73 @@ func main() {
 	defer rows.Close()
 	logTable(rows)
 
-	// delete all events to start fresh
-	db.Exec(`DELETE FROM cash_flow_events`)
+	createMV(db, `SELECT id, amount, category, user_id FROM cash_flow_events LIMIT 5`, "cash_flow_events_mv")
+
+	// delete db file
+	os.Remove("./test.db")
+}
+
+func createMV(db *sql.DB, query string, mvName string) error {
+	// Get data based on provided query
+	rows, err := db.Query(query)
+	if err != nil {
+		return fmt.Errorf("error executing query: %w", err)
+	}
+	defer rows.Close()
+
+	// Get column names and types
+	columnTypes, err := rows.ColumnTypes()
+	if err != nil {
+		return fmt.Errorf("error getting column types: %w", err)
+	}
+
+	// Create table schema
+	createTableSQL := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (", mvName)
+	for i, ct := range columnTypes {
+		if i > 0 {
+			createTableSQL += ", "
+		}
+		createTableSQL += fmt.Sprintf("%s %s", ct.Name(), sqliteType(ct.DatabaseTypeName()))
+	}
+	createTableSQL += ")"
+	log.Println("creation query:", createTableSQL)
+
+	// Create the table
+	_, err = db.Exec(createTableSQL)
+	if err != nil {
+		return fmt.Errorf("error creating table: %w", err)
+	}
+
+	// Insert data into the new table
+	insertSQL := fmt.Sprintf("INSERT INTO %s SELECT * FROM (%s)", mvName, query)
+	_, err = db.Exec(insertSQL)
+	if err != nil {
+		return fmt.Errorf("error inserting data: %w", err)
+	}
+	log.Println("insertion query:", insertSQL)
+
+	// read the data from the new table
+	rows, err = db.Query(fmt.Sprintf("SELECT * FROM %s", mvName))
+	if err != nil {
+		return fmt.Errorf("error reading data: %w", err)
+	}
+	defer rows.Close()
+	logTable(rows)
+
+	return nil
+}
+
+func sqliteType(dbType string) string {
+	switch dbType {
+	case "INTEGER":
+		return "INTEGER"
+	case "REAL":
+		return "REAL"
+	case "TEXT":
+		return "TEXT"
+	case "BLOB":
+		return "BLOB"
+	default:
+		return "TEXT"
+	}
 }
