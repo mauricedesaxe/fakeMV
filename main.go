@@ -67,10 +67,34 @@ func main() {
 	defer rows.Close()
 	logTable(rows)
 
+	prepareMVCentralStore(db)
 	createMV(db, `SELECT id, amount, category, user_id FROM cash_flow_events LIMIT 5`, "cash_flow_events_mv")
+
+	// remove the last 5 events
+	db.Exec(`DELETE FROM cash_flow_events WHERE id IN (SELECT id FROM cash_flow_events ORDER BY id DESC LIMIT 5)`)
+
+	// refresh the material view
+	refreshMV(db, "cash_flow_events_mv")
 
 	// delete db file
 	os.Remove("./test.db")
+}
+
+// creates a table where we store material views => query connections
+// so the user can easily refresh the material view in the future
+func prepareMVCentralStore(db *sql.DB) error {
+	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS mv_central_store (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL,  -- name of the material view
+		query TEXT NOT NULL, -- query used to create the material view
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		deleted_at TIMESTAMP
+	)`)
+	if err != nil {
+		return fmt.Errorf("error creating mv_central_store table: %w", err)
+	}
+	return nil
 }
 
 func createMV(db *sql.DB, query string, mvName string) error {
@@ -111,6 +135,12 @@ func createMV(db *sql.DB, query string, mvName string) error {
 	}
 	defer tx.Rollback() // Rollback in case of error
 
+	// insert the material view into the central store
+	_, err = tx.Exec(`INSERT INTO mv_central_store (name, query) VALUES (?, ?)`, mvName, query)
+	if err != nil {
+		return fmt.Errorf("error inserting material view into central store: %w", err)
+	}
+
 	// Drop data of table
 	_, err = tx.Exec(fmt.Sprintf("DELETE FROM %s", mvName))
 	if err != nil {
@@ -140,6 +170,18 @@ func createMV(db *sql.DB, query string, mvName string) error {
 	logTable(rows)
 
 	return nil
+}
+
+func refreshMV(db *sql.DB, mvName string) error {
+	// find the query used to create the material view
+	query := ""
+	db.QueryRow("SELECT query FROM mv_central_store WHERE name = ?", mvName).Scan(&query)
+	if query == "" {
+		return fmt.Errorf("material view not found")
+	}
+
+	// re-create the material view
+	return createMV(db, query, mvName)
 }
 
 func sqliteType(dbType string) string {
