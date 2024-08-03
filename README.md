@@ -4,7 +4,7 @@ This lib helps you create materialized views in your SQLite database.
 
 ```go
 import (
-	"github.com/mauricedesaxe/fakeMV"
+    "github.com/mauricedesaxe/fakeMV/fakemv"
 )
 
 func main() {
@@ -20,7 +20,7 @@ func main() {
     */ 
 
     // Initialize FakeMV
-    fakeMV := &FakeMV{}
+    fakeMV := &fakemv.FakeMV{}
     fakeMV.Init(db) // this creates a table "mv_central_store" where we have metadata about all materialized views
 
     // Create a materialized view
