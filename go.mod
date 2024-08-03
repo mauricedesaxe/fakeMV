@@ -1,4 +1,4 @@
-module github.com/mauricedesaxe/fake_mat_views
+module github.com/mauricedesaxe/fakeMV
 
 go 1.22.5
 

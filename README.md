@@ -4,7 +4,7 @@ This lib helps you create materialized views in your SQLite database.
 
 ```go
 import (
-	"github.com/julian-englert/go-sqlite-materialized-views"
+	"github.com/mauricedesaxe/fakeMV"
 )
 
 func main() {
