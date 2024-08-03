@@ -1,4 +1,4 @@
-package main
+package fakeMV
 
 import (
 	"database/sql"
